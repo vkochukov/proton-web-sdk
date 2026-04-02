@@ -162,7 +162,8 @@ export class LinkChain implements AbiProvider {
                 getAbi = this.client.get_abi(account.toString())
                 this.pendingAbis.set(key, getAbi)
             }
-            rv = (await getAbi).abi
+            const response = await getAbi
+            rv = response?.abi || response
             this.pendingAbis.delete(key)
             if (rv) {
                 this.abiCache.set(key, rv)

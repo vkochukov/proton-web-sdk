@@ -8,9 +8,19 @@ export let session: LinkSession | undefined
 
 const USE_PULSE_VM = import.meta.env.VITE_USE_PULSE_VM === 'true'
 const REQUEST_ACCOUNT = 'taskly'
-const CHAIN_ID = '384da888112027f0321850a169f737c33e53b388aad48b5adace4bab97f437e0'
-const ENDPOINTS = ['https://proton.greymass.com']
-const TOKEN_CONTRACT = USE_PULSE_VM ? 'pulse.token' : 'eosio.token'
+const CHAIN_ID = import.meta.env.VITE_CHAIN_ID
+const ENDPOINTS = (
+  import.meta.env.VITE_ENDPOINTS ||
+  (USE_PULSE_VM
+    ? 'https://pulsevm-devnet-01.metalblockchain.org/ext/bc/2T6FphmDo8szR3UERGsDsXaQPb52xUn2djnAt7S6LECbHDhc5L/rpc'
+    : 'https://proton.greymass.com')
+)
+  .split(',')
+  .map((endpoint: string) => endpoint.trim())
+  .filter(Boolean)
+const TOKEN_CONTRACT = import.meta.env.VITE_TOKEN_CONTRACT || (USE_PULSE_VM ? 'pulse.token' : 'eosio.token')
+const TOKEN_SYMBOL = import.meta.env.VITE_TOKEN_SYMBOL || 'XPR'
+const TOKEN_PRECISION = Number(import.meta.env.VITE_TOKEN_PRECISION || '4')
 
 const rpc = new JsonRpc(ENDPOINTS)
 
@@ -22,7 +32,8 @@ export const createLink = async ({
   const { link: localLink, session: localSession } = await ProtonWebSDK({
     linkOptions: {
       endpoints: ENDPOINTS,
-      chainId: CHAIN_ID,
+      ...(CHAIN_ID ? { chainId: CHAIN_ID } : {}),
+      usePulseVM: USE_PULSE_VM,
       restoreSession,
     },
     transportOptions: {
@@ -65,8 +76,8 @@ export const transact = async (
 }
 
 export const logout = async (): Promise<void> => {
-  if (link && session) {
-    await link.removeSession(REQUEST_ACCOUNT, session.auth, CHAIN_ID)
+  if (session) {
+    await session.remove()
   }
   session = undefined
   link = undefined
@@ -111,7 +122,7 @@ export const transfer = async ({ to, amount }: { to: string; amount: string }) =
               to: to,
 
               // 4 is precision, XPR is symbol
-              quantity: `${(+amount).toFixed(4)} XPR`,
+              quantity: `${(+amount).toFixed(TOKEN_PRECISION)} ${TOKEN_SYMBOL}`,
 
               // Optional memo
               memo: '',
@@ -133,7 +144,9 @@ export const transfer = async ({ to, amount }: { to: string; amount: string }) =
 export async function getProtonAvatar(
   account: string,
 ): Promise<RpcInterfaces.UserInfo | undefined> {
-  if (USE_PULSE_VM) return undefined
+  if (USE_PULSE_VM) {
+    return undefined
+  }
 
   try {
     const result = await rpc.get_table_rows({

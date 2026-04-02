@@ -1,0 +1,757 @@
+diff --git a/dist/index.js b/dist/index.js
+index 879b0658d769dcdf6e7c4446f8b65ff0f33ab09c..fa449f9217c16d7964ef3ee37a0f5e300baf9478 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -5068,12 +5068,26 @@ var Api = /*#__PURE__*/ function() {
+             key: "pushCompressedSignedTransaction",
+             value: function pushCompressedSignedTransaction(_0) {
+                 return _async_to_generator(function(param) {
+-                    var signatures, serializedTransaction, serializedContextFreeData, readOnlyTrx, returnFailureTraces, compressedSerializedTransaction, compressedSerializedContextFreeData;
++                    var signatures, serializedTransaction, serializedContextFreeData, readOnlyTrx, returnFailureTraces, compressedSerializedTransaction, contextFreeDataToCompress, compressedSerializedContextFreeData;
+                     var _arguments = arguments;
+                     return _ts_generator(this, function(_state) {
+                         signatures = param.signatures, serializedTransaction = param.serializedTransaction, serializedContextFreeData = param.serializedContextFreeData, readOnlyTrx = _arguments.length > 1 && _arguments[1] !== void 0 ? _arguments[1] : false, returnFailureTraces = _arguments.length > 2 && _arguments[2] !== void 0 ? _arguments[2] : false;
+                         compressedSerializedTransaction = this.deflateSerializedArray(serializedTransaction);
+-                        compressedSerializedContextFreeData = this.deflateSerializedArray(serializedContextFreeData || new Uint8Array(0));
++                        contextFreeDataToCompress = serializedContextFreeData;
++                        if (_instanceof(this.rpc, JsonRpcPulseVM) && !(contextFreeDataToCompress !== null && contextFreeDataToCompress !== void 0 && contextFreeDataToCompress.length)) {
++                            contextFreeDataToCompress = new Uint8Array([
++                                0
++                            ]);
++                        }
++                        if (_instanceof(this.rpc, JsonRpcPulseVM)) {
++                            console.log("[PulseVM pushCompressedSignedTransaction]", {
++                                signaturesCount: (signatures === null || signatures === void 0 ? void 0 : signatures.length) || 0,
++                                serializedTransactionLength: (serializedTransaction === null || serializedTransaction === void 0 ? void 0 : serializedTransaction.length) || 0,
++                                serializedContextFreeDataLength: (serializedContextFreeData === null || serializedContextFreeData === void 0 ? void 0 : serializedContextFreeData.length) || 0,
++                                contextFreeDataToCompressLength: (contextFreeDataToCompress === null || contextFreeDataToCompress === void 0 ? void 0 : contextFreeDataToCompress.length) || 0
++                            });
++                        }
++                        compressedSerializedContextFreeData = this.deflateSerializedArray(contextFreeDataToCompress || new Uint8Array(0));
+                         if (readOnlyTrx) {
+                             return [
+                                 2,
+@@ -5119,45 +5133,58 @@ var Api = /*#__PURE__*/ function() {
+                                 info = _state.sent();
+                                 _state.label = 2;
+                             case 2:
++                                if (!(_instanceof(this.rpc, JsonRpcPulseVM) && expireSeconds && info.last_irreversible_block_id)) return [
++                                    3,
++                                    3
++                                ];
++                                return [
++                                    2,
++                                    _object_spread({}, transactionHeader({
++                                        block_num: info.last_irreversible_block_num,
++                                        id: info.last_irreversible_block_id,
++                                        timestamp: info.server_time || info.head_block_time
++                                    }, expireSeconds), transaction)
++                                ];
++                            case 3:
+                                 if (!useLastIrreversible) return [
+                                     3,
+-                                    4
++                                    5
+                                 ];
+                                 return [
+                                     4,
+                                     this.tryRefBlockFromGetInfo(info)
+                                 ];
+-                            case 3:
++                            case 4:
+                                 block = _state.sent();
+                                 return [
+                                     2,
+                                     _object_spread({}, transactionHeader(block, expireSeconds), transaction)
+                                 ];
+-                            case 4:
++                            case 5:
+                                 taposBlockNumber = info.head_block_num - blocksBehind;
+                                 if (!(taposBlockNumber <= info.last_irreversible_block_num)) return [
+                                     3,
+-                                    6
++                                    7
+                                 ];
+                                 return [
+                                     4,
+                                     this.tryGetBlockInfo(taposBlockNumber)
+                                 ];
+-                            case 5:
++                            case 6:
+                                 _tmp = _state.sent();
+                                 return [
+                                     3,
+-                                    8
++                                    9
+                                 ];
+-                            case 6:
++                            case 7:
+                                 return [
+                                     4,
+                                     this.tryGetBlockHeaderState(taposBlockNumber)
+                                 ];
+-                            case 7:
+-                                _tmp = _state.sent();
+-                                _state.label = 8;
+                             case 8:
++                                _tmp = _state.sent();
++                                _state.label = 9;
++                            case 9:
+                                 refBlock = _tmp;
+                                 return [
+                                     2,
+@@ -7442,7 +7469,7 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                     return _get(_get_prototype_of(JsonRpcPulseVM.prototype), "processResult", _this);
+                 };
+                 return _async_to_generator(function() {
+-                    var response, result, legacy, _path, _body, json, e, headTime, ct, secondsBehind;
++                    var response, result, legacy, _path, _body, responseText, json, e, headTime, ct, secondsBehind;
+                     return _ts_generator(this, function(_state) {
+                         switch(_state.label){
+                             case 0:
+@@ -7472,10 +7499,22 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                                 response = _state.sent();
+                                 return [
+                                     4,
+-                                    response.json()
++                                    response.text()
+                                 ];
+                             case 3:
+-                                json = _state.sent();
++                                responseText = _state.sent();
++                                try {
++                                    json = JSON.parse(responseText);
++                                } catch (parseError) {
++                                    console.log("[PulseVM fetch] non-json response", {
++                                        path: path,
++                                        url: _path,
++                                        status: response === null || response === void 0 ? void 0 : response.status,
++                                        ok: response === null || response === void 0 ? void 0 : response.ok,
++                                        body: responseText
++                                    });
++                                    throw parseError;
++                                }
+                                 result = legacy ? _superprop_get_processResult().call(_this1, json) : this.processResult(json);
+                                 if (result.processed && result.processed.except || result.result && result.result.except || result.code === 404 || result.error) {
+                                     throw new RpcError(result);
+@@ -7531,6 +7570,7 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+             key: "get_abi",
+             value: function get_abi(accountName) {
+                 return _async_to_generator(function() {
++                    var response;
+                     return _ts_generator(this, function(_state) {
+                         switch(_state.label){
+                             case 0:
+@@ -7541,9 +7581,13 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                                     })
+                                 ];
+                             case 1:
++                                response = _state.sent();
+                                 return [
+                                     2,
+-                                    _state.sent()
++                                    response && response.abi ? response : {
++                                        account_name: response && response.account_name ? response.account_name : accountName,
++                                        abi: response
++                                    }
+                                 ];
+                         }
+                     });
+@@ -7596,6 +7640,52 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                 }).call(this);
+             }
+         },
++        {
++            key: "get_block_info",
++            value: function get_block_info(blockNum) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getBlockInfo", {
++                                        block_num: blockNum
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "get_code",
++            value: function get_code(accountName) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getCode", {
++                                        account_name: accountName
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
+         {
+             key: "get_currency_balance",
+             value: function get_currency_balance(code, account, symbol) {
+@@ -7715,6 +7805,155 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                 }).call(this);
+             }
+         },
++        {
++            key: "get_accounts_by_authorizers",
++            value: function get_accounts_by_authorizers(accounts, keys) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getAccountsByAuthorizers", {
++                                        accounts: accounts,
++                                        keys: keys
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "get_key_accounts",
++            value: function get_key_accounts(param) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getKeyAccounts", {
++                                        public_key: param.public_key
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "history_get_key_accounts",
++            value: function history_get_key_accounts(publicKey) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getKeyAccounts", {
++                                        public_key: publicKey
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "push_transaction",
++            value: function push_transaction(_0) {
++                return _async_to_generator(function(param) {
++                    var signatures, _param_compression, compression, serializedTransaction, serializedContextFreeData, packedContextFreeData, result, transactionId, info, blockNum;
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                signatures = param.signatures, _param_compression = param.compression, compression = _param_compression === void 0 ? 0 : _param_compression, serializedTransaction = param.serializedTransaction, serializedContextFreeData = param.serializedContextFreeData;
++                                packedContextFreeData = serializedContextFreeData !== null && serializedContextFreeData !== void 0 && serializedContextFreeData.length ? arrayToHex2(serializedContextFreeData) : "00";
++                                console.log("[PulseVM push_transaction] request", {
++                                    signaturesCount: (signatures === null || signatures === void 0 ? void 0 : signatures.length) || 0,
++                                    compression: compression,
++                                    serializedTransactionLength: (serializedTransaction === null || serializedTransaction === void 0 ? void 0 : serializedTransaction.length) || 0,
++                                    serializedContextFreeDataLength: (serializedContextFreeData === null || serializedContextFreeData === void 0 ? void 0 : serializedContextFreeData.length) || 0,
++                                    packedContextFreeData: packedContextFreeData,
++                                    packedTrxPreview: arrayToHex2(serializedTransaction).slice(0, 64)
++                                });
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.issueTx", {
++                                        signatures: signatures,
++                                        compression: compression,
++                                        packed_context_free_data: packedContextFreeData,
++                                        packed_trx: arrayToHex2(serializedTransaction)
++                                    })
++                                ];
++                            case 1:
++                                result = _state.sent();
++                                console.log("[PulseVM push_transaction] response", result);
++                                transactionId = typeof result === "string" ? result : (result === null || result === void 0 ? void 0 : result.txID) || (result === null || result === void 0 ? void 0 : result.transaction_id);
++                                if (!!transactionId) return [
++                                    3,
++                                    2
++                                ];
++                                return [
++                                    2,
++                                    result
++                                ];
++                            case 2:
++                                return [
++                                    4,
++                                    this.get_info().catch(function() {
++                                        return undefined;
++                                    })
++                                ];
++                            case 3:
++                                info = _state.sent();
++                                blockNum = Number((info === null || info === void 0 ? void 0 : info.last_irreversible_block_num) || 0);
++                                return [
++                                    2,
++                                    {
++                                        transaction_id: transactionId,
++                                        processed: {
++                                            id: transactionId,
++                                            block_num: blockNum,
++                                            block_time: new Date().toISOString(),
++                                            producer_block_id: null,
++                                            receipt: {
++                                                status: "executed",
++                                                cpu_usage_us: 0,
++                                                net_usage_words: 0
++                                            },
++                                            elapsed: 0,
++                                            net_usage: 0,
++                                            scheduled: false,
++                                            action_traces: [],
++                                            account_ram_delta: null,
++                                            except: null,
++                                            error_code: null,
++                                            bill_to_accounts: []
++                                        }
++                                    }
++                                ];
++                        }
++                    });
++                }).apply(this, arguments);
++            }
++        },
+         {
+             key: "get_table_rows",
+             value: /** Raw call to `/v1/chain/get_table_rows` */ function get_table_rows(_0) {
+@@ -7759,13 +7998,15 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+         {
+             key: "prepareBody",
+             value: function prepareBody(body, extras) {
++                var requestId = this._pulsevmRequestId || 0;
++                this._pulsevmRequestId = requestId + 1;
+                 return {
+-                    body: JSON.stringify(_object_spread({
++                    body: JSON.stringify({
+                         jsonrpc: "2.0",
+-                        id: 0,
++                        id: requestId,
+                         method: extras === null || extras === void 0 ? void 0 : extras.path,
+                         params: body
+-                    }, extras)),
++                    }),
+                     method: "POST",
+                     timeout: this.timeout,
+                     headers: {
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 52bcc3d00edbc09e68059aa9c1933f8218a332d2..37e659fb8e51835e5fa29835b997792487ffbed5 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -4979,12 +4979,18 @@ var Api = /*#__PURE__*/ function() {
+             key: "pushCompressedSignedTransaction",
+             value: function pushCompressedSignedTransaction(_0) {
+                 return _async_to_generator(function(param) {
+-                    var signatures, serializedTransaction, serializedContextFreeData, readOnlyTrx, returnFailureTraces, compressedSerializedTransaction, compressedSerializedContextFreeData;
++                    var signatures, serializedTransaction, serializedContextFreeData, readOnlyTrx, returnFailureTraces, compressedSerializedTransaction, contextFreeDataToCompress, compressedSerializedContextFreeData;
+                     var _arguments = arguments;
+                     return _ts_generator(this, function(_state) {
+                         signatures = param.signatures, serializedTransaction = param.serializedTransaction, serializedContextFreeData = param.serializedContextFreeData, readOnlyTrx = _arguments.length > 1 && _arguments[1] !== void 0 ? _arguments[1] : false, returnFailureTraces = _arguments.length > 2 && _arguments[2] !== void 0 ? _arguments[2] : false;
+                         compressedSerializedTransaction = this.deflateSerializedArray(serializedTransaction);
+-                        compressedSerializedContextFreeData = this.deflateSerializedArray(serializedContextFreeData || new Uint8Array(0));
++                        contextFreeDataToCompress = serializedContextFreeData;
++                        if (_instanceof(this.rpc, JsonRpcPulseVM) && !(contextFreeDataToCompress !== null && contextFreeDataToCompress !== void 0 && contextFreeDataToCompress.length)) {
++                            contextFreeDataToCompress = new Uint8Array([
++                                0
++                            ]);
++                        }
++                        compressedSerializedContextFreeData = this.deflateSerializedArray(contextFreeDataToCompress || new Uint8Array(0));
+                         if (readOnlyTrx) {
+                             return [
+                                 2,
+@@ -5030,45 +5036,58 @@ var Api = /*#__PURE__*/ function() {
+                                 info = _state.sent();
+                                 _state.label = 2;
+                             case 2:
++                                if (!(_instanceof(this.rpc, JsonRpcPulseVM) && expireSeconds && info.last_irreversible_block_id)) return [
++                                    3,
++                                    3
++                                ];
++                                return [
++                                    2,
++                                    _object_spread({}, transactionHeader({
++                                        block_num: info.last_irreversible_block_num,
++                                        id: info.last_irreversible_block_id,
++                                        timestamp: info.server_time || info.head_block_time
++                                    }, expireSeconds), transaction)
++                                ];
++                            case 3:
+                                 if (!useLastIrreversible) return [
+                                     3,
+-                                    4
++                                    5
+                                 ];
+                                 return [
+                                     4,
+                                     this.tryRefBlockFromGetInfo(info)
+                                 ];
+-                            case 3:
++                            case 4:
+                                 block = _state.sent();
+                                 return [
+                                     2,
+                                     _object_spread({}, transactionHeader(block, expireSeconds), transaction)
+                                 ];
+-                            case 4:
++                            case 5:
+                                 taposBlockNumber = info.head_block_num - blocksBehind;
+                                 if (!(taposBlockNumber <= info.last_irreversible_block_num)) return [
+                                     3,
+-                                    6
++                                    7
+                                 ];
+                                 return [
+                                     4,
+                                     this.tryGetBlockInfo(taposBlockNumber)
+                                 ];
+-                            case 5:
++                            case 6:
+                                 _tmp = _state.sent();
+                                 return [
+                                     3,
+-                                    8
++                                    9
+                                 ];
+-                            case 6:
++                            case 7:
+                                 return [
+                                     4,
+                                     this.tryGetBlockHeaderState(taposBlockNumber)
+                                 ];
+-                            case 7:
+-                                _tmp = _state.sent();
+-                                _state.label = 8;
+                             case 8:
++                                _tmp = _state.sent();
++                                _state.label = 9;
++                            case 9:
+                                 refBlock = _tmp;
+                                 return [
+                                     2,
+@@ -7359,7 +7378,7 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                     return _get(_get_prototype_of(JsonRpcPulseVM.prototype), "processResult", _this);
+                 };
+                 return _async_to_generator(function() {
+-                    var response, result, legacy, _path, _body, json, e, headTime, ct, secondsBehind;
++                    var response, result, legacy, _path, _body, responseText, json, e, headTime, ct, secondsBehind;
+                     return _ts_generator(this, function(_state) {
+                         switch(_state.label){
+                             case 0:
+@@ -7389,10 +7408,22 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                                 response = _state.sent();
+                                 return [
+                                     4,
+-                                    response.json()
++                                    response.text()
+                                 ];
+                             case 3:
+-                                json = _state.sent();
++                                responseText = _state.sent();
++                                try {
++                                    json = JSON.parse(responseText);
++                                } catch (parseError) {
++                                    console.log("[PulseVM fetch] non-json response", {
++                                        path: path,
++                                        url: _path,
++                                        status: response === null || response === void 0 ? void 0 : response.status,
++                                        ok: response === null || response === void 0 ? void 0 : response.ok,
++                                        body: responseText
++                                    });
++                                    throw parseError;
++                                }
+                                 result = legacy ? _superprop_get_processResult().call(_this1, json) : this.processResult(json);
+                                 if (result.processed && result.processed.except || result.result && result.result.except || result.code === 404 || result.error) {
+                                     throw new RpcError(result);
+@@ -7448,6 +7479,7 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+             key: "get_abi",
+             value: function get_abi(accountName) {
+                 return _async_to_generator(function() {
++                    var response;
+                     return _ts_generator(this, function(_state) {
+                         switch(_state.label){
+                             case 0:
+@@ -7458,9 +7490,13 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                                     })
+                                 ];
+                             case 1:
++                                response = _state.sent();
+                                 return [
+                                     2,
+-                                    _state.sent()
++                                    response && response.abi ? response : {
++                                        account_name: response && response.account_name ? response.account_name : accountName,
++                                        abi: response
++                                    }
+                                 ];
+                         }
+                     });
+@@ -7513,6 +7549,52 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                 }).call(this);
+             }
+         },
++        {
++            key: "get_block_info",
++            value: function get_block_info(blockNum) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getBlockInfo", {
++                                        block_num: blockNum
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "get_code",
++            value: function get_code(accountName) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getCode", {
++                                        account_name: accountName
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
+         {
+             key: "get_currency_balance",
+             value: function get_currency_balance(code, account, symbol) {
+@@ -7632,6 +7714,146 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+                 }).call(this);
+             }
+         },
++        {
++            key: "get_accounts_by_authorizers",
++            value: function get_accounts_by_authorizers(accounts, keys) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getAccountsByAuthorizers", {
++                                        accounts: accounts,
++                                        keys: keys
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "get_key_accounts",
++            value: function get_key_accounts(param) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getKeyAccounts", {
++                                        public_key: param.public_key
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "history_get_key_accounts",
++            value: function history_get_key_accounts(publicKey) {
++                return _async_to_generator(function() {
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.getKeyAccounts", {
++                                        public_key: publicKey
++                                    })
++                                ];
++                            case 1:
++                                return [
++                                    2,
++                                    _state.sent()
++                                ];
++                        }
++                    });
++                }).call(this);
++            }
++        },
++        {
++            key: "push_transaction",
++            value: function push_transaction(_0) {
++                return _async_to_generator(function(param) {
++                    var signatures, _param_compression, compression, serializedTransaction, serializedContextFreeData, packedContextFreeData, result, transactionId, info, blockNum;
++                    return _ts_generator(this, function(_state) {
++                        switch(_state.label){
++                            case 0:
++                                signatures = param.signatures, _param_compression = param.compression, compression = _param_compression === void 0 ? 0 : _param_compression, serializedTransaction = param.serializedTransaction, serializedContextFreeData = param.serializedContextFreeData;
++                                packedContextFreeData = serializedContextFreeData !== null && serializedContextFreeData !== void 0 && serializedContextFreeData.length ? arrayToHex2(serializedContextFreeData) : "00";
++                                return [
++                                    4,
++                                    this.fetch("pulsevm.issueTx", {
++                                        signatures: signatures,
++                                        compression: compression,
++                                        packed_context_free_data: packedContextFreeData,
++                                        packed_trx: arrayToHex2(serializedTransaction)
++                                    })
++                                ];
++                            case 1:
++                                result = _state.sent();
++                                transactionId = typeof result === "string" ? result : (result === null || result === void 0 ? void 0 : result.txID) || (result === null || result === void 0 ? void 0 : result.transaction_id);
++                                if (!!transactionId) return [
++                                    3,
++                                    2
++                                ];
++                                return [
++                                    2,
++                                    result
++                                ];
++                            case 2:
++                                return [
++                                    4,
++                                    this.get_info().catch(function() {
++                                        return undefined;
++                                    })
++                                ];
++                            case 3:
++                                info = _state.sent();
++                                blockNum = Number((info === null || info === void 0 ? void 0 : info.last_irreversible_block_num) || 0);
++                                return [
++                                    2,
++                                    {
++                                        transaction_id: transactionId,
++                                        processed: {
++                                            id: transactionId,
++                                            block_num: blockNum,
++                                            block_time: new Date().toISOString(),
++                                            producer_block_id: null,
++                                            receipt: {
++                                                status: "executed",
++                                                cpu_usage_us: 0,
++                                                net_usage_words: 0
++                                            },
++                                            elapsed: 0,
++                                            net_usage: 0,
++                                            scheduled: false,
++                                            action_traces: [],
++                                            account_ram_delta: null,
++                                            except: null,
++                                            error_code: null,
++                                            bill_to_accounts: []
++                                        }
++                                    }
++                                ];
++                        }
++                    });
++                }).apply(this, arguments);
++            }
++        },
+         {
+             key: "get_table_rows",
+             value: /** Raw call to `/v1/chain/get_table_rows` */ function get_table_rows(_0) {
+@@ -7676,13 +7898,15 @@ var JsonRpcPulseVM = /*#__PURE__*/ function(JsonRpc) {
+         {
+             key: "prepareBody",
+             value: function prepareBody(body, extras) {
++                var requestId = this._pulsevmRequestId || 0;
++                this._pulsevmRequestId = requestId + 1;
+                 return {
+-                    body: JSON.stringify(_object_spread({
++                    body: JSON.stringify({
+                         jsonrpc: "2.0",
+-                        id: 0,
++                        id: requestId,
+                         method: extras === null || extras === void 0 ? void 0 : extras.path,
+                         params: body
+-                    }, extras)),
++                    }),
+                     method: "POST",
+                     timeout: this.timeout,
+                     headers: {
