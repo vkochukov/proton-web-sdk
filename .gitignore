@@ -2,6 +2,8 @@ node_modules
 .angular
 .turbo
 dist
+!examples/vue/dist/
+!examples/vue/dist/**
 packages/**/lib
 
 packages/proton-react-native-sdk/example/*.lock
