@@ -7,7 +7,7 @@ description = "Hosted Vue site"
 "sharrattj/static-web-server" = "1"
 
 [fs]
-public = "examples/vue/dist"
+public = "dist"
 settings = "settings"
 
 [[command]]
