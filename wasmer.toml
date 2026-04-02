@@ -1,0 +1,19 @@
+[package]
+name = "vkochukov/edge-demo-site"
+version = "0.1.0"
+description = "Hosted Vue site"
+
+[dependencies]
+"sharrattj/static-web-server" = "1"
+
+[fs]
+public = "examples/vue/dist"
+settings = "settings"
+
+[[command]]
+name = "script"
+module = "sharrattj/static-web-server:webserver"
+runner = "https://webc.org/runner/wasi"
+
+[command.annotations.wasi]
+main-args = ["-w", "/settings/config.toml"]

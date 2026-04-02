@@ -1,0 +1,4 @@
+kind: wasmer.io/App.v0
+owner: vkochukov
+name: edge-demo-site
+package: .

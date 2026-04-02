@@ -9,7 +9,8 @@
     "publish-packages": "turbo run build lint --filter=./packages/* && changeset version && changeset publish && pnpm i",
     "lint": "turbo run build lint",
     "build": "turbo run build",
-    "dev": "turbo run watch --parallel"
+    "dev": "turbo run watch --parallel",
+    "build:wasmer": "VITE_USE_PULSE_VM=true pnpm --filter test-app-vue build"
   },
   "devDependencies": {
     "@changesets/cli": "^2.25.0",
