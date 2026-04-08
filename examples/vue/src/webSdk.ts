@@ -12,12 +12,14 @@ const CHAIN_ID = import.meta.env.VITE_CHAIN_ID
 const ENDPOINTS = (
   import.meta.env.VITE_ENDPOINTS ||
   (USE_PULSE_VM
-    ? 'https://pulsevm-devnet-01.metalblockchain.org/ext/bc/2T6FphmDo8szR3UERGsDsXaQPb52xUn2djnAt7S6LECbHDhc5L/rpc'
+    ? 'https://a-chain-alpine.metalblockchain.org/ext/bc/6v9NieZiX3e8eQz3CyJMtXB6YzV2RtnxcRyLAmSgFWWk5Qs6y/rpc'
     : 'https://proton.greymass.com')
 )
   .split(',')
   .map((endpoint: string) => endpoint.trim())
   .filter(Boolean)
+export const HYPERION_ENDPOINT =
+  import.meta.env.VITE_HYPERION_ENDPOINT || 'https://a-chain-alpine-hyperion.metalblockchain.org'
 const TOKEN_CONTRACT = import.meta.env.VITE_TOKEN_CONTRACT || (USE_PULSE_VM ? 'pulse.token' : 'eosio.token')
 const TOKEN_SYMBOL = import.meta.env.VITE_TOKEN_SYMBOL || 'XPR'
 const TOKEN_PRECISION = Number(import.meta.env.VITE_TOKEN_PRECISION || '4')
