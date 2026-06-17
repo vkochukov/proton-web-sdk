@@ -20,7 +20,7 @@ interface ConnectWalletArgs {
 }
 
 const PULSE_VM_DEFAULT_ENDPOINTS = [
-  'https://a-chain-alpine.metalblockchain.org/ext/bc/6v9NieZiX3e8eQz3CyJMtXB6YzV2RtnxcRyLAmSgFWWk5Qs6y/rpc',
+  'https://a-chain-alpine-rpc.metalblockchain.org/rpc',
 ]
 const PULSE_VM_DEFAULT_CHAIN_ID =
   'bef02258ee702d2d8df016ce2f2cbcf6bfa986dcd8c8641acd9068b8f9c4c7ef'
